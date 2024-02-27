@@ -28,3 +28,4 @@ First, please understand that this is not your regular project to merge your PR.
 - Install node package manager by running "pip i npm"
 - Create scr and public folder
 - now install nodemon (Nodemon - Ye aapke server ko automatically stop and start (restart) krta hai jaise hi kuch changes hote hai)
+- now change package.json file for running "dev" command as "nodemon src/index.js"
