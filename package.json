@@ -2,9 +2,11 @@
   "name": "youtube-project-backend",
   "version": "1.0.0",
   "description": "This is a project with complete backend",
+  "type": "module",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
   },
   "author": "Ayush Suryawanshi",
   "license": "ISC",

@@ -22,3 +22,9 @@ Top Contributer to complete all TODOs
 ## How to contribute in this open source Project
 
 First, please understand that this is not your regular project to merge your PR. This repo requires you to finish all assignments that are in controller folder. We don't accept half work, please finish all controllers and then reach us out on [Discord](https://hitesh.ai/discord) or [Twitter](https://twitter.com/@hiteshdotcom) and after checking your repo, I will add link to your repo in this readme.
+
+## How to setup project
+
+- Install node package manager by running "pip i npm"
+- Create scr and public folder
+- now install nodemon (Nodemon - Ye aapke server ko automatically stop and start (restart) krta hai jaise hi kuch changes hote hai)
