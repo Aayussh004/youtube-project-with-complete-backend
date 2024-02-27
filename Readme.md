@@ -25,7 +25,12 @@ First, please understand that this is not your regular project to merge your PR.
 
 ## How to setup project
 
-- Install node package manager by running "pip i npm"
+- Install node package manager by running "npm init"
 - Create scr and public folder
 - now install nodemon (Nodemon - Ye aapke server ko automatically stop and start (restart) krta hai jaise hi kuch changes hote hai)
 - now change package.json file for running "dev" command as "nodemon src/index.js"
+- create new folders in /src as controllers, db, models, routes, utils
+
+- now install prettier from "npm i -D prettier" as dev dependency
+- create a file .prettierrc in root directory and configure it
+- now make a file .prettierignore and configure it
