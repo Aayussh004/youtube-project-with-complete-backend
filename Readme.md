@@ -34,3 +34,10 @@ First, please understand that this is not your regular project to merge your PR.
 - now install prettier from "npm i -D prettier" as dev dependency
 - create a file .prettierrc in root directory and configure it
 - now make a file .prettierignore and configure it
+
+## How to connect database
+
+- We will use mongodb here
+- create your account if not created and configure it to create a cluster free from aws
+- now goto database and copy the url and then paste it in .env file and replace your password
+- now install mongoose, express, dotenv
