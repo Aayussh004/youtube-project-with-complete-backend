@@ -23,8 +23,8 @@
    await mongoose.connect(`${process.env.MONGODB_URI}/${DB_NAME}`);
    //maan lo ab db connect ho gya hai but express me error aa rhi hai to usko handle kro
    app.on("eroor",(error)=>{
-    console.log("Error: ",error)
-    throw error
+    console.log("express me Error: ",error)
+    // throw error
    })
 
    //ab agr baat ho rhi hai app se to listen
@@ -33,8 +33,8 @@
    })
    } 
    catch (error) {
-    console.error("ERROR: ",error);
-    throw error
+    console.error("Database ka ERROR: ",error);
+    // throw error
    }
 })()
 
@@ -58,4 +58,18 @@ dotenv.config({
     path: './env'
 })
 
-connectDB();//2nd method jo import kiye the db se 
+//2nd method jo import kiye the db se 
+// ab database se hum baar baar baat krenge to isko ek utility ke jaise use kr skte hai in "./utils/asyncHandle.js"
+connectDB()
+.then(()=>{
+    app.listen(process.env.PORT || 8000,()=>{//ye to pta hoga 
+        console.log(`Server is running on port: ${process.env.PORT}`)
+    })
+    app.on((err)=>{//ye safety feature hai maan log agr app nhi chla to 
+console.log("Server cannot run on port, ERROR: ",err);
+    })
+})
+.catch((error)=>{//agr error aaya to .catch chlega
+console.log("Failed to connect MongoDB !!! ERROR: ",error);
+})
+
