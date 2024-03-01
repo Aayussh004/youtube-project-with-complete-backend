@@ -1,7 +1,7 @@
 
 //2nd way (promise wala)
 const asyncHandler = (reqhandler)=>{//higher order function
-    (req,res,next)=>{
+   return (req,res,next)=>{//function ko return kr rhe hai
     Promise
      .resolve(reqhandler(req,res,next))
      .reject((err) =>

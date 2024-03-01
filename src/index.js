@@ -60,16 +60,23 @@ dotenv.config({
 
 //2nd method jo import kiye the db se 
 // ab database se hum baar baar baat krenge to isko ek utility ke jaise use kr skte hai in "./utils/asyncHandle.js"
+
+// import express from "express";
+import {app} from './app.js'
+// const app = express();
+
+
 connectDB()
-.then(()=>{
-    app.listen(process.env.PORT || 8000,()=>{//ye to pta hoga 
-        console.log(`Server is running on port: ${process.env.PORT}`)
-    })
-    app.on((err)=>{//ye safety feature hai maan log agr app nhi chla to 
-console.log("Server cannot run on port, ERROR: ",err);
+.then(() => {
+    app.listen(process.env.PORT || 8000, () => {
+        console.log(`⚙️ Server is running at port : ${process.env.PORT}`);
     })
 })
-.catch((error)=>{//agr error aaya to .catch chlega
-console.log("Failed to connect MongoDB !!! ERROR: ",error);
+.catch((err) => {
+    console.log("MONGO db connection failed !!! ", err);
 })
 
+
+// app.on((err)=>{//ye safety feature hai maan log agr app nhi chla to 
+// console.log("Server cannot run on port, ERROR: ",err);
+// })
