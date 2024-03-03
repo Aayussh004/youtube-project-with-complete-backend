@@ -2,13 +2,13 @@ import mongoose from "mongoose";
 
 
 import jwt from "jsonwebtoken"
-// JWTs are widely used for authentication and authorization in web applications. Instead of repeatedly sending usernames and passwords with each request, users receive a JWT upon logging in, which they can then present with subsequent requests. Servers can quickly validate the JWT by checking its signature and reading the information in the payload to determine the user's identity and permissions.
+// JWTs are widely used for authentication and authorization in web applications. Instead of repeatedly sending userNames and passwords with each request, users receive a JWT upon logging in, which they can then present with subsequent requests. Servers can quickly validate the JWT by checking its signature and reading the information in the payload to determine the user's identity and permissions.
 
 import bcrypt from "bcrypt"
 // In Mongoose, bcrypt is often used for hashing and salting passwords before storing them in the database. Here's how bcrypt is typically integrated into a Mongoose schema to hash passwords
 
 const userSchema = new mongoose.Schema({
-    username:{
+    userName:{
         type:String,
         required:true,
         unique:true,
@@ -65,7 +65,7 @@ userSchema.pre("save", async function(next){//ab middleware hai to next bhi aaye
     
     if(!this.isModified("password")) return next();//if password modified hua hi nhi hai to return krdo
 
-    this.password = bcrypt.hash(this.password, 10)//password ko encrypt krdo bcrypt se 10 means 10 times salting hui h (kuch bda hua h!!)
+    this.password = await bcrypt.hash(this.password, 10)//password ko encrypt krdo bcrypt se, 10 means 10 times salting hui h (kuch bda hua h!!)
     next();//next middleware me pass krdo
 })
 
@@ -81,7 +81,7 @@ userSchema.methods.generateAccessToken= function(){
     jwt.sign({
         _id: this._id, //_id mongodb ki id hai
         email:this.email,
-        username:this.username,
+        userName:this.userName,
         fullName:this.fullName
     
     }, process.env.ACCESS_TOKEN_SECRET,
@@ -93,7 +93,7 @@ userSchema.methods.generateRefreshToken= function(){
     jwt.sign({//payload 
         _id: this._id, //_id mongodb ki id hai
         email:this.email,
-        username:this.username,
+        userName:this.userName,
         fullName:this.fullName
     }, process.env.REFRESH_TOKEN_SECRET,
     {
@@ -106,11 +106,11 @@ export const User = mongoose.model("User",userSchema);
 
 
 //jwt (jsonwebtokens)
-//  Imagine JWTs like special stamps you get after logging into a website. These stamps prove you're allowed to access certain parts of the site without needing to enter your username and password over and over again.
+//  Imagine JWTs like special stamps you get after logging into a website. These stamps prove you're allowed to access certain parts of the site without needing to enter your userName and password over and over again.
 
 // -> Getting the Stamp: When you log in, the website gives you a stamp (JWT) that says who you are and what you're allowed to do.
 
-// -> Using the Stamp: Instead of telling the website your username and password every time you want to do something, you just show your stamp (JWT). The website checks the stamp to make sure it's real and sees what you're allowed to do.
+// -> Using the Stamp: Instead of telling the website your userName and password every time you want to do something, you just show your stamp (JWT). The website checks the stamp to make sure it's real and sees what you're allowed to do.
 
 // -> Quick Checks: Because the stamp contains all the important information, like your name and permissions, the website can quickly check it and decide if you're allowed to do what you're asking.
 

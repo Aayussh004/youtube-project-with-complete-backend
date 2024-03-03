@@ -1,5 +1,5 @@
 // goto multer/github to get the code
-
+import multer from "multer";
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {//cb is callback   
       cb(null, "./public/temp")//cb ke parameter, ye whi temp hai jo sbse phle banaye the gitkeep krke 
