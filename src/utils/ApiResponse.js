@@ -1,8 +1,10 @@
+
+
 class ApiResponse{
     constructor(statusCode,data,message){
         this.message = message
         this.statusCode = statusCode
-        this.data = null
+        this.data = data
         this.success = statusCode<400
         // If the statusCode is less than 400, it means the request was successful (since HTTP status codes in the range of 200 to 399 typically indicate success). So, this.success is set to true.
         // If the statusCode is 400 or higher, it implies an error, so this.success is set to false.

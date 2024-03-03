@@ -46,7 +46,7 @@ const registerUser = asyncHandler( async (req, res) => {
      //now ab user database me hai ya nhi, iske liye mujhe db access krna padega jo mujhe User access kra dega kyuki wo khud mongoose se bna
      // hai, yakeen na ho to User.model.js me jaake dekho
 
-     const existedUser = User.findOne({
+     const existedUser = await User.findOne({
           $or: [ {userName}, {email}]
      })
     
@@ -58,16 +58,20 @@ const registerUser = asyncHandler( async (req, res) => {
 //step 4: check for images, check for avatar
 
      //ab ye req.files inbuilt method hume multer ne provide kraya hai jbki req.body express deta hai
-     const avatarLocalPath = req.files?.avatar[0]?.path;
-     const coverImageLocalPath = req.files?.coverImage[0]?.path;
+     const avatarLocalPath = req.files?.avatar?.[0]?.path;
+     let coverImageLocalPath = req.files?.coverImage?.[0]?.path
 
      if(!avatarLocalPath){throw new ApiError(400,"Avatar file is required: multer error cannot upload to localserver")}//agr avatar nhi h to error dedo
      
-     
-     
-     //step 5: upload them to cloudinary, avatar
+     // let coverImageLocalPath;
+     // if (req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 0) {
+     //     coverImageLocalPath = req.files.coverImage[0].path
+     // }
+
+
+//step 5: upload them to cloudinary, avatar
      const avatar = await uploadOnCloudinary(avatarLocalPath);//ab ye time lagaega to async await use krenge yha
-     const coverImage = await uploadOnCloudinary(coverImageLocalPath);
+    const coverImage = await uploadOnCloudinary(coverImageLocalPath);
      
      //agr avatar nhi hai to error dedo kyuki wo required h, double check krlo yha bhi
      if(!avatar) {throw new ApiError(400,"Avatar is required: Cloudinary upload error")}
@@ -79,7 +83,7 @@ const registerUser = asyncHandler( async (req, res) => {
           fullName,
           userName: userName.toLowerCase(),
           avatar:avatar.url,
-          coverImage:coverImage?.url || "",
+          coverImage: coverImage?.url || "",
           email,
           password,
      })
@@ -89,11 +93,12 @@ const registerUser = asyncHandler( async (req, res) => {
 
      
 
-//step 7: remove password and refresh token field from response
-     const createdUser = await User.findById(user._id).select(
-          "-password -refreshToken" 
+//step 7: remove password and refresh token field from response 
+const createdUser = await User.findById(user._id).select(
+     "-password -refreshToken" 
      )
-
+     
+//step 8: check for user creation
      if(!createdUser){
           throw new ApiError(500, "Something went wrong while registering user: Server Error")
      }
@@ -105,6 +110,9 @@ const registerUser = asyncHandler( async (req, res) => {
           new ApiResponse(200,createdUser,"User registered successfully in database:)")
      )
 
+//now goto postman then select Post then body then select form-data and give the keys as given in this file 
+//ab dikkat ye hai ki local me (./public) me images aa rhi hai and cloudinary me bhi aa rhi hai and save ho jaa rhi hai but ab wha se inko htana bhi hai
+//iske liye goto cloudinary.js and unlink the files
 
 
 }

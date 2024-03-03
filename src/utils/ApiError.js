@@ -1,5 +1,6 @@
 class ApiError extends Error{//error ko dene ki utility hai
     constructor(statusCode, message="Something went wrong!!",  errors=[], stack=""){
+        super(message)
         this.message = message
         this.statusCode = statusCode
         this.errors = errors
