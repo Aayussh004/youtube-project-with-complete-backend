@@ -7,11 +7,31 @@ import { User } from "../models/user.models.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 
+//for making refresh tokens for user
+ //step 5: Generate refresh and access token (for Login)
+const generateAccessAndRefreshToken = async(userId)=>{
+     try {
+          const user = await User.findById(userId)//ab user ki info aa gyi h mere paas
+         const accessToken = user.generateAccessToken();//current user ke liye generate ho gye hai
+         const refreshToken = user.generateRefreshToken();//ye databse me jayega taaki jwt se compare kr ske and user ko bhi dedo refreshtoken
+
+         //ab user ko bhi whi refresh token dedo jo genrate kiya h
+         user.refreshToken = refreshToken;
+         await user.save({validateBeforSave:false})//coz pswd required tha bt hmare paas h nhi
+
+         return {accessToken,refreshToken};
+     } catch (error) {
+          throw new ApiError(500,"Something went wrong: Cannot generate tokens for user")
+     }
+}
+
+
+ 
 //now ab really me user ko register krwao
 const registerUser = asyncHandler( async (req, res) => {
      //step 1: get user details from frontend
      //step 2: validation - not empty
-     //step 3: check if user already exists: username, email
+     //step 3: check if user already exists: userName, email
      //step 4: check for images, check for avatar
      //step 5: upload them to cloudinary, avatar
      //step 6: create user object - create entry in db
@@ -41,7 +61,7 @@ const registerUser = asyncHandler( async (req, res) => {
           throw new ApiError(400, "All fields are required!!: Client error");
      }
 
-//step 3: check if user already exists: username, email
+//step 3: check if user already exists: userName, email
 
      //now ab user database me hai ya nhi, iske liye mujhe db access krna padega jo mujhe User access kra dega kyuki wo khud mongoose se bna
      // hai, yakeen na ho to User.model.js me jaake dekho
@@ -51,7 +71,7 @@ const registerUser = asyncHandler( async (req, res) => {
      })
     
      if(existedUser){
-          throw new ApiError(409,"User already exist with username or email: Client error");//ye thoda change kr skte ho logic
+          throw new ApiError(409,"User already exist with userName or email: Client error");//ye thoda change kr skte ho logic
      }
 
 
@@ -114,10 +134,103 @@ const createdUser = await User.findById(user._id).select(
 //ab dikkat ye hai ki local me (./public) me images aa rhi hai and cloudinary me bhi aa rhi hai and save ho jaa rhi hai but ab wha se inko htana bhi hai
 //iske liye goto cloudinary.js and unlink the files
 
-
 }
 )
-export {registerUser};
+
+ //Login User
+
+const loginUser = asyncHandler(async (req,res)=>{
+
+     //for login we have all steps
+     //step 1: Take the data from frontend logging in user
+     //step 2: Check required fields are filled or not
+     //step 3: Validate if userName or email is matching in our db or not
+     //step 4: Check if password is correct or not
+     //step 5: Generate refresh and access token
+     //step 6: Send cookies
+
+//step 1: Take the data from frontend logging in user
+  const {email,userName,password} = req.body
+
+//step 2: Check required fields are filled or not
+if (!userName && !email) {
+     throw new ApiError(400, "userName or email is required")
+ }
+
+//step 3: Validate if userName or email is matching in our db or not
+  const user = await User.findOne({
+          $or:[{userName},{email}]
+     })
+
+// agar user nhi mila db me to return error
+  if(!user){
+     throw new ApiError(404,"User does not exist: cannot find in database!")
+           }
+
+//step 4: Check if password is correct or not
+     //user -> jo frontend ka user de rha hai, User->jo backend me stored hai
+     
+     console.log(user.isPasswordCorrect(password))
+     const isPasswordValid = await user.isPasswordCorrect(password)
+
+     if(!isPasswordValid){throw new ApiError(401,"Invalid user credentials: wrong password entered!")}
+
+ //step 5: Generate refresh and access token
+    const {accessToken, refreshToken} = await generateAccessAndRefreshToken(user._id);//_id mongoose ki id hai and destructuring 
+
+     //ab humne ek user jo db me exist krta hai uske liye access and refresh token bna liye h now ab nya reference deke loggedin user bna lo jiske paas dono token hai
+
+     
+//step 6: Send cookies
+     const loggedInUser = await User.findById(user._id).select("-password")//ye dono field nhi chahiye kyui cookie send krni hai
+
+     //now cookies
+     const options = {//so this cannot be modifiable from browser and only modified from server
+       httpOnly:true,
+       secure:true
+     }
+
+
+     return res
+     .status(200)
+     .cookie("accessToken",accessToken,options)
+     .cookie("refreshToken",refreshToken,options)
+     .json(
+          new ApiResponse(200,{user:loggedInUser,accessToken,refreshToken},"User logged in successfully!")
+     )//ye response me tokens bhi send isiliye kr rhe hai ki jb frontend engineer ko tokens ki zarurat ho skti h native apps bnane ke liye
+
+})
+
+//Logout User
+
+const logoutUser = asyncHandler (async (req,res)=>{
+     
+     //ab user ka access kaise laoge
+     //goto middleware and create a method auth.middleware.js there 
+     //wha pe jaa ke cookie se user ka accesstoken lelo aur return krwa do taaki uss user ko hum apne db me dhund ke logout kra de 
+
+     //get that user who want to logout and erase the refresh token of tht user
+        await User.findByIdAndUpdate(req.user._id,
+          {$set:{refreshToken:undefined}},
+         {new:true}
+         )//for deleting refreshtoken from database
+     
+     //now ab browser se toke delete krne ke liye cookie ko clear krdo
+     const options = {
+          httpOnly:true,
+          secure:true
+     }
+
+     return res
+     .status(200)
+     .clearCookie("accessToken",options)
+     .clearCookie("refreshToken",options)
+     .json(new ApiResponse(200,{},"User logged out!"))
+})
+
+
+
+export {registerUser,loginUser,logoutUser};
 
 
 

@@ -1,6 +1,7 @@
 import { Router } from "express";
-import { registerUser } from "../controllers/user.controller.js";
+import { loginUser, logoutUser, registerUser } from "../controllers/user.controller.js";
 import { upload } from "../middleware/multer.js";
+import { verifyJWT } from "../middleware/auth.middleware.js";
 
 
 const router = Router();
@@ -19,6 +20,11 @@ router.route("/register").post(
     ]) , 
     registerUser
     )//yha hum post method call kr rhe hai
+
+router.route("/login").post(loginUser)
+
+//secured routes
+router.route("/logout").post(verifyJWT,logoutUser)
 
 // http://localhost:8000/api/v1/users/register to ab ye registerUser call krdega jo ki message "Ok registerd" de dega
 //now download postman and create new workspace and give this same link

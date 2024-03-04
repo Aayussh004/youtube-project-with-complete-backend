@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose,{Schema} from "mongoose";
 
 
 import jwt from "jsonwebtoken"
@@ -7,50 +7,50 @@ import jwt from "jsonwebtoken"
 import bcrypt from "bcrypt"
 // In Mongoose, bcrypt is often used for hashing and salting passwords before storing them in the database. Here's how bcrypt is typically integrated into a Mongoose schema to hash passwords
 
-const userSchema = new mongoose.Schema({
-    userName:{
-        type:String,
-        required:true,
-        unique:true,
-        lowercase:true,
-        trim:true,
-        index:true 
+const userSchema = new Schema({
+    userName: {
+        type: String,
+        required: true,
+        unique: true,
+        lowercase: true,
+        trim: true,
+        index: true
     },
-    email:{
-        type:String,
-        required:true,
-        unique:true,
-        lowercase:true,
-        trim:true
+    email: {
+        type: String,
+        required: true,
+        unique: true,
+        lowercase: true,
+        trim: true
     },
-    fullName:{
-        type:String,
-        required:true,
-        trim:true,
-        index:true
+    fullName: {
+        type: String,
+        required: true,
+        trim: true,
+        index: true
     },
-    avatar:{
-        type:String,// cloudinary url kyuki wo image store krke provide kra dega
-        required:true,
+    avatar: {
+        type: String,// cloudinary url kyuki wo image store krke provide kra dega
+        required: true,
     },
-    coverimage:{
-        type:String,// cloudinary url kyuki wo image store krke provide kra dega
+    coverimage: {
+        type: String,// cloudinary url kyuki wo image store krke provide kra dega
     },
-    watchHisttory:[
+    watchHisttory: [
         {//video id provide kra do
-            type:mongoose.Schema.ObjectId,
-            ref:"Video"
+            type: mongoose.Schema.ObjectId,
+            ref: "Video"
         }
     ],
-    password:{
-        type:String,
-        required:[true, 'Password is required']
+    password: {
+        type: String,
+        required: [true, 'Password is required']
     },
-    refreshToken:{
-        type:String//long string hai aur kuch nhi
+    refreshToken: {
+        type: String//long string hai aur kuch nhi
     }
 
-},{timestamps:true})
+}, { timestamps: true })
 
 //now install jwt token and bcrypt "npm i jsonwebtoken bcrypt"
 //import jwt and bcrypt
@@ -61,48 +61,48 @@ const userSchema = new mongoose.Schema({
 // Middleware (hooks)
 
 // Encrypting password at first signup
-userSchema.pre("save", async function(next){//ab middleware hai to next bhi aayega aur arrow fun. ko avoid krenge kyuki "this" keyword available nhi hota usme, "save" first argument hai kyuki pwd save krne se phle middlware lgana hai
-    
-    if(!this.isModified("password")) return next();//if password modified hua hi nhi hai to return krdo
+userSchema.pre("save", async function (next) {//ab middleware hai to next bhi aayega aur arrow fun. ko avoid krenge kyuki "this" keyword available nhi hota usme, "save" first argument hai kyuki pwd save krne se phle middlware lgana hai
+
+    if (!this.isModified("password")) return next();//if password modified hua hi nhi hai to return krdo
 
     this.password = await bcrypt.hash(this.password, 10)//password ko encrypt krdo bcrypt se, 10 means 10 times salting hui h (kuch bda hua h!!)
     next();//next middleware me pass krdo
 })
 
 //ab password check krna hai shi hai ki nhi, dobara login krne pe
-userSchema.methods.isPasswordCorrect = async function(password){
-  return await bcrypt.compare(password,this.password);//user ka entered pswd mere db ke pswd se match hora ya nhi and ye return true ya false krega
+userSchema.methods.isPasswordCorrect = async function (password) {
+    return await bcrypt.compare(password, this.password)
 }
 
 //ab jwt use krne ke liye .env file me secret token add kro, kuch bhi likh skte ho apne man ka(type of a secret key jo sirf admin ko pta ho)
 
 //JWT tokens configurations
-userSchema.methods.generateAccessToken= function(){
-    jwt.sign({
+userSchema.methods.generateAccessToken = function () {
+   return jwt.sign({
         _id: this._id, //_id mongodb ki id hai
-        email:this.email,
-        userName:this.userName,
-        fullName:this.fullName
-    
+        email: this.email,
+        userName: this.userName,
+        fullName: this.fullName
+
     }, process.env.ACCESS_TOKEN_SECRET,
-    {
-        expiresIn:process.env.ACCESS_TOKEN_EXPIRY
-    })//ye jwt token generate krega,
+        {
+            expiresIn: process.env.ACCESS_TOKEN_EXPIRY
+        })//ye jwt token generate krega,
 }
-userSchema.methods.generateRefreshToken= function(){
-    jwt.sign({//payload 
+userSchema.methods.generateRefreshToken = function () {
+  return  jwt.sign({//payload 
         _id: this._id, //_id mongodb ki id hai
-        email:this.email,
-        userName:this.userName,
-        fullName:this.fullName
+        email: this.email,
+        userName: this.userName,
+        fullName: this.fullName
     }, process.env.REFRESH_TOKEN_SECRET,
-    {
-        expiresIn:process.env.REFRESH_TOKEN_EXPIRY
-    })
+        {
+            expiresIn: process.env.REFRESH_TOKEN_EXPIRY
+        })
 }
 
 
-export const User = mongoose.model("User",userSchema);
+export const User = mongoose.model("User", userSchema);
 
 
 //jwt (jsonwebtokens)
@@ -116,10 +116,11 @@ export const User = mongoose.model("User",userSchema);
 
 //jwt is a "bearer token" means jiske paas token h wo allowed h
 
-//now we will see how to upload files 
+//now we will see how to upload files
 //2 types hote hai ek express-fileupload se aur dusra multer se, hum multer use krenge
 //now go to cloudinary a great plateform to use our uploaded image in websites, free hai
 //now do "npm i cloudinary"
 // "npm i multer"
 
 //now go to "./util/cloudinary" 
+

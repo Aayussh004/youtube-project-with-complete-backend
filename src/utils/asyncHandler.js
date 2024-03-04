@@ -1,12 +1,9 @@
 
 //2nd way (promise wala)
-const asyncHandler = (reqhandler)=>{//higher order function
-   return (req,res,next)=>{//function ko return kr rhe hai
-    Promise
-     .resolve(reqhandler(req,res,next))
-     .catch((err) =>
-      next(err))
-    }
+const asyncHandler = (requestHandler) => {
+  return (req, res, next) => {
+      Promise.resolve(requestHandler(req, res, next)).catch((err) => next(err))
+  }
 }
 
 //error ki bhi hum utility bna skte hai means generalized format bna lete hai we will make "ApiError.js" file for that
