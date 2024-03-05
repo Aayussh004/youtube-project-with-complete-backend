@@ -269,11 +269,121 @@ const refreshAccessToken = asyncHandler(async (req,res)=>{
      }
     
 })
+
 //now goto models and make subscription model there
 
+//now we need to update some info of user for that we will create model
+
+//Update Password 
+const changeCurrentPassword = asyncHandler(async(req,res)=>{
+     const {oldPassword,newPassword} = req.body//take this from frontend
+
+     //if user is logged in then user ko find krlo by his id
+     const user = await User.findById(req.user?._id);//ye mil gya apna user db me
+
+     const isPasswordcrct = await user.isPasswordCorrect(oldPassword);
+//check if entered pswd is right or not
+     if(!isPasswordcrct){throw new ApiError(400,"Invalid old password")};
+
+     //now modify the user pswd and save the pswd 
+     user.password = newPassword
+     user.save({validateBeforSave:false});
+
+     //now you have changed the pswd successfully
+     return res
+     .status(200)
+     .json(new ApiResponse(200,{},"You have successfully changed the password!!"))
+
+})
 
 
-export {registerUser,loginUser,logoutUser,refreshAccessToken};
+// Get the current user
+const getCurrentUser = asyncHandler(async(req,res)=>{
+     //ye req.user aaya hai apne middleware se jo auth.middleware bnaya tha user ko authenticate krne ke liye
+     return res
+     .status(200)
+     .json(new ApiResponse(200,req.user,"User information fetched successfully from db!"))
+})
+
+
+//update account details
+const updateAccountDetails = asyncHandler(async(req,res)=>{
+     const {fullName,email} = req.body//jo bhi chij change krana hai wo lelo
+
+     if(!fullName || !email){
+          throw new ApiError(400,"All fields are required: email aur fullName both!")
+     }
+
+     //now ab update krana hai to current user ko db me find krke direct update kr skte ho $set se
+     const user  = await User.findByIdAndUpdate(req.user?._id,{
+          $set:{
+               fullName:fullName,
+               email:email
+          }
+     },{new:true}).select("-password");
+
+     return res
+     .status(200)
+     .json(200,user,"Account details updated successfully!!")
+})
+
+//update avatar 
+const updateUserAvatar = asyncHandler(async(req,res)=>{
+     const {avatarLocalPath} = req.file?.path;//user se newavatar lelo jo update krwana hai
+     //ye multer se aaya hai kyuki ye file local me upload ho gyi h ab
+
+
+     //now if avatar ka localpath mil gya to multer ne local me upload krdi hogi
+     if(!avatarLocalPath){
+          throw new ApiError(400,"Avatar file is required!:avatar not found")
+     }
+
+     //now ab new avatar ko cloudinary me upload krna pdega yha mongoose kaam nhi aayega kyoki db to ab cloudinary hai na image files ke liye
+    const avatar = await uploadOnCloudinary(avatarLocalPath)
+
+    if(!avatar.url){
+     throw new ApiError(400,"Error while uploading new avatar to cloudinary!!")
+    }
+
+    //now ab mongodb me bhi avatar hai wha ka url change krna pdega na 
+    //get the user and update the url of cloudinary in db
+    const user = await User.findByIdAndUpdate(req.user?._id,{
+     $set:{avatar:avatar.url}
+    },{new:true}).select("-password")//password hta do
+
+    return res
+    .status(200)
+    .ApiResponse(200,user,"Avatar Changed successfully!!");
+})
+
+const updateUserCoverImage = asyncHandler(async(req,res)=>{
+     const {CoverLocalPath} = req.file?.path;//user se newavatar lelo jo update krwana hai
+     //ye multer se aaya hai kyuki ye file local me upload ho gyi h ab
+
+
+     //now if avatar ka localpath mil gya to multer ne local me upload krdi hogi
+     if(!CoverLocalPath){
+          throw new ApiError(400,"Avatar file is required!:avatar not found")
+     }
+
+     //now ab new avatar ko cloudinary me upload krna pdega yha mongoose kaam nhi aayega kyoki db to ab cloudinary hai na image files ke liye
+    const CoverImage = await uploadOnCloudinary(avatarLocalPath)
+
+    if(!CoverImage.url){
+     throw new ApiError(400,"Error while uploading new avatar to cloudinary!!")
+    }
+
+    //now ab mongodb me bhi avatar hai wha ka url change krna pdega na 
+    //get the user and update the url of cloudinary in db
+    const user = await User.findByIdAndUpdate(req.user?._id,{
+     $set:{coverimage:CoverImage.url}
+    },{new:true}).select("-password")//password hta do
+
+    return res
+    .status(200)
+    .ApiResponse(200,user,"CoverImage Changed successfully!!");
+})
+export {registerUser,loginUser,logoutUser,refreshAccessToken,changeCurrentPassword,updateAccountDetails,updateUserAvatar,updateUserCoverImage};
 
 
 

@@ -12,6 +12,6 @@ const subscriptionSchema = new Schema({
     }
 },{timestamps:true})
 
-//ab user 
+//ab user controllers likhenge updates ke goto controller
 
 export const Subscription = mongoose.model("Subscription",subscriptionSchema);
