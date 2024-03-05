@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { loginUser, logoutUser, registerUser } from "../controllers/user.controller.js";
+import { loginUser, logoutUser, refreshAccessToken, registerUser } from "../controllers/user.controller.js";
 import { upload } from "../middleware/multer.js";
 import { verifyJWT } from "../middleware/auth.middleware.js";
 
@@ -25,6 +25,9 @@ router.route("/login").post(loginUser)
 
 //secured routes
 router.route("/logout").post(verifyJWT,logoutUser)
+
+//for creating new refreshtoken for user when they hit this endpoint
+router.route("/refreshAccessToken").post(refreshAccessToken)
 
 // http://localhost:8000/api/v1/users/register to ab ye registerUser call krdega jo ki message "Ok registerd" de dega
 //now download postman and create new workspace and give this same link

@@ -6,6 +6,7 @@ import {ApiError} from "../utils/ApiError.js"
 import { User } from "../models/user.models.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import jwt from "jsonwebtoken"
 
 //for making refresh tokens for user
  //step 5: Generate refresh and access token (for Login)
@@ -229,8 +230,50 @@ const logoutUser = asyncHandler (async (req,res)=>{
 })
 
 
+const refreshAccessToken = asyncHandler(async (req,res)=>{
 
-export {registerUser,loginUser,logoutUser};
+     //sbse phle user se uska refresh token lelo by cookie
+     const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshAccessToken
+     if(!incomingRefreshToken){
+          throw new ApiError(401,"Unauthorized request: your token is not right1");
+     }
+
+     //now jwt.verify se decoded token lenge user ka kyuki user ke paas encrypted token hota hai 
+     try {
+          const decodedToken = jwt.verify(incomingRefreshToken,process.env.REFRESH_TOKEN_SECRET)
+     
+          //now ab frontend ka token mil gya h ab mongodb ke databse me ussi user ko dhund lo by the above decodedtoken
+          const user = await User.findById(decodedToken?._id);
+     
+          if(!user){throw new ApiError(401,"Unauthorized request: your token is not right2");}
+     
+          //now ab incomingrefresh token aur jo apn ne decoded token nikala hai wo match krenge to phir wo apna hi user hai usko nya token dedo generate krke
+          if(incomingRefreshToken !== user?.refreshToken){
+               throw new ApiError(401,"Your Refresh token doesn't match with our db");
+          }
+     
+          //now ab nya token bna ke dedo cookie ke andar apne user ko
+          const options = {
+               httpOnly:true,
+               secure:true
+          }
+          
+          return res.status(200)
+         .cookie("refreshToken",newrefreshToken,options)
+         .cookie("accessToken",accessToken,options)
+         .json(
+          new ApiResponse(200,{accessToken,newrefreshToken},"New refresh and accessToken generated successfully")
+         )
+     } catch (error) {
+          throw new ApiError(401,error || "Invalid refresh token")
+     }
+    
+})
+//now goto models and make subscription model there
+
+
+
+export {registerUser,loginUser,logoutUser,refreshAccessToken};
 
 
 

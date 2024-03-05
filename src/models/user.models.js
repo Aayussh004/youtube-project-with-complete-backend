@@ -92,9 +92,7 @@ userSchema.methods.generateAccessToken = function () {
 userSchema.methods.generateRefreshToken = function () {
   return  jwt.sign({//payload 
         _id: this._id, //_id mongodb ki id hai
-        email: this.email,
-        userName: this.userName,
-        fullName: this.fullName
+       
     }, process.env.REFRESH_TOKEN_SECRET,
         {
             expiresIn: process.env.REFRESH_TOKEN_EXPIRY
