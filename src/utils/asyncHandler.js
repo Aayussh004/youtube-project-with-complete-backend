@@ -15,8 +15,6 @@ export {asyncHandler}
 
 // 1st way to write asyncHandler (trycatch wala)
 
-
-
 // const asyncHandler = () => {}
 // const asyncHandler = (func) => () => {}
 // const asyncHandler = (func) => async () => {}
