@@ -39,6 +39,7 @@ const uploadOnCloudinary = async (localpath) =>{
     }
 }
 
+//user.controller me use hua hai :)
 const destroyOnCloudinary = async (remotePath) => {
     // Call code ---  await destroyOnCloudinary(req.user.avatar)
     try {
@@ -59,7 +60,19 @@ const destroyOnCloudinary = async (remotePath) => {
     }
 }
 
-export {uploadOnCloudinary,destroyOnCloudinary};
+const deleteOnCloudinary = async(public_id, resource_type)=>{
+    if(!public_id) return null
+    try {
+        return await cloudinary.uploader.destroy(public_id, {
+            resource_type,
+        })
+    } catch (error) {
+        console.log(error)
+        return null
+    }
+}
+
+export {uploadOnCloudinary,destroyOnCloudinary,deleteOnCloudinary};
 
 //now you have created a utility to upload any type of file from local server to cloudinary
 //now create a middleware multer se user se file lekr local me store krne ke liye
