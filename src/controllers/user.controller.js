@@ -4,7 +4,7 @@
 import { asyncHandler } from "../utils/asyncHandler.js";//{} ye as a object isiliye import kiye hai kyuki asyncHandler file me wo isi prakar exported tha
 import {ApiError} from "../utils/ApiError.js"
 import { User } from "../models/user.models.js";
-import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import { uploadOnCloudinary,destroyOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken"
 import mongoose from "mongoose";
@@ -213,7 +213,10 @@ const logoutUser = asyncHandler (async (req,res)=>{
 
      //get that user who want to logout and erase the refresh token of tht user
         await User.findByIdAndUpdate(req.user._id,
-          {$set:{refreshToken:undefined}},
+          {$unset:{
+               refreshToken:1
+                  }
+          },
          {new:true}
          )//for deleting refreshtoken from database
      
@@ -259,6 +262,8 @@ const refreshAccessToken = asyncHandler(async (req,res)=>{
                secure:true
           }
           
+          const {accessToken,newrefreshToken} = await generateAccessAndRefreshToken(user._id)
+
           return res.status(200)
          .cookie("refreshToken",newrefreshToken,options)
          .cookie("accessToken",accessToken,options)
@@ -323,14 +328,12 @@ const updateAccountDetails = asyncHandler(async(req,res)=>{
           }
      },{new:true}).select("-password");
 
-     return res
-     .status(200)
-     .json(200,user,"Account details updated successfully!!")
+     return res.status(200).json(new ApiResponse(200,user,"Account details updated successfully!!"))
 })
 
 //update avatar 
 const updateUserAvatar = asyncHandler(async(req,res)=>{
-     const {avatarLocalPath} = req.file?.path;//user se newavatar lelo jo update krwana hai
+     const avatarLocalPath = req.file?.path;//user se newavatar lelo jo update krwana hai
      //ye multer se aaya hai kyuki ye file local me upload ho gyi h ab
 
 
@@ -338,6 +341,9 @@ const updateUserAvatar = asyncHandler(async(req,res)=>{
      if(!avatarLocalPath){
           throw new ApiError(400,"Avatar file is required!:avatar not found")
      }
+
+     //now new avatar upload krne se phle purana delete bhi krna pdega
+     await destroyOnCloudinary(req.user.avatar);
 
      //now ab new avatar ko cloudinary me upload krna pdega yha mongoose kaam nhi aayega kyoki db to ab cloudinary hai na image files ke liye
     const avatar = await uploadOnCloudinary(avatarLocalPath)
@@ -354,106 +360,183 @@ const updateUserAvatar = asyncHandler(async(req,res)=>{
 
     return res
     .status(200)
-    .ApiResponse(200,user,"Avatar Changed successfully!!");
+    .json(new ApiResponse(200,user,"Avatar Changed successfully!!"));
 })
 
 const updateUserCoverImage = asyncHandler(async(req,res)=>{
-     const {CoverLocalPath} = req.file?.path;//user se newavatar lelo jo update krwana hai
+     const CoverLocalPath = req.file?.path;//user se newavatar lelo jo update krwana hai
     
      if(!CoverLocalPath){
           throw new ApiError(400,"Avatar file is required!:avatar not found")
      }
 
-    const CoverImage = await uploadOnCloudinary(avatarLocalPath)
+     await destroyOnCloudinary(req.user.coverImage);
+
+    const CoverImage = await uploadOnCloudinary(CoverLocalPath)
 
     if(!CoverImage.url){
      throw new ApiError(400,"Error while uploading new avatar to cloudinary!!")
     }
 
     const user = await User.findByIdAndUpdate(req.user?._id,{
-     $set:{coverimage:CoverImage.url}
+     $set:{coverImage:CoverImage.url}//ye coverImage user ka parameter hai jo set up ho rha hai CoverImage ki url se
     },{new:true}).select("-password")//password hta do
 
     return res
     .status(200)
-    .ApiResponse(200,user,"CoverImage Changed successfully!!");
+    .json(new ApiResponse(200,user,"CoverImage Changed successfully!!"));
 })
 
 
 //yha pe pipeline use krenge
-const getUserChannelProfile = asyncHandler(async (req,res)=>{
+// const getUserChannelProfile = asyncHandler(async (req,res)=>{
 
+//      const {userName} = req.params
+
+//      if(!userName?.trim()){throw new ApiError(400,"UserName is missing: getUserChannelProfile controller")}
+
+// //document - {subscriber,channel}//ye whi subscription.model.js ka docs hai
+// //users: a,b,c,d  channel:cac,hcc,fcc
+// //{a,cac} {b,cac} {c,cac} {c,hcc} {c,fcc} 
+// //now cac ke kitne subscriber hai? Ans. count/match the docs where channel is cac = 3 
+// //c ne kitne channels subscribed kre h? Ans. count docs where user is c = 3     
+
+// //lets say chaiaurcode ke subscriber and subscribedto find krna hai
+//      const channel = User.aggregate([
+//           {
+//                $match:{//username is cac
+//                     userName:userName?.toLowerCase()//now direct ek document find krte hai match se
+//                }
+//           },
+//           //to find subscriber of cac, goto subscription model kyuki wha to field hai subscriber aur channel
+//           {
+//                $lookup:{
+//                     from:"subscriptions",//ye humesh db me lowercase and plural me store hota hai
+//                     localField:"_id",
+//                     foreignField:"channel",
+//                     as:"subscribers"
+//                }
+//           },
+//           //to find how many channels does cac subscribed
+//           {
+//                $lookup:{
+//                     from:"subscriptions",//ye humesh db me lowercase and plural me store hota hai
+//                     localField:"_id",//cac ki id
+//                     foreignField:"subscriber",
+//                     as:"subscribedTo"
+//                }
+//           },
+//           //to add the fields give another pipeline
+//           {
+//                $addFields:{
+//                     subscribersCount:{
+//                          $size:"$subscribers"//to calculate no. of subscribers
+//                     },
+//                     channelsSubscribedTo:{
+//                          $size:"$subscribedTo"//to calculate no. of subscribers
+//                     },
+//                     isSubscribed:{//to give true ya false if current user is subscribed to that channel(jiske subscribers hum dekh rhe h) or not
+//                          $cond:{
+//                               if:{$in:[req.user?._id,"$subscribers.subscriber"]},
+//                               then:true,
+//                               else:false
+//                          }
+//                     }
+//                }
+//           },
+//           //now to project aur give only those field which is required by frontend, add another pipeline
+//           {
+//                $project:{
+//                     fullName:1,
+//                     userName:1,
+//                     subscribersCount:1,
+//                     channelsSubscribedTo:1,
+//                     isSubscribed:1,
+//                     avatar:1,
+//                     coverImage:1,
+//                     email:1,
+//                }
+//           }
+//      ])
+//      if(!channel?.length){
+//           throw new ApiError(404, "channel does not exists")
+//      }
+//    //now we got the value of channel as aggregate function return array we return arr[0]
+//    return res.status(200)
+//              .json(new ApiResponse(200,channel[0],"User Channel fetched successfully!!"))
+// })
+
+const getUserChannelProfile = asyncHandler(async(req, res) => {
      const {userName} = req.params
-
-     if(!userName){throw new ApiError(400,"UserName is missing: getUserChannelProfile controller")}
-
-//document - {subscriber,channel}//ye whi subscription.model.js ka docs hai
-//users: a,b,c,d  channel:cac,hcc,fcc
-//{a,cac} {b,cac} {c,cac} {c,hcc} {c,fcc} 
-//now cac ke kitne subscriber hai? Ans. count/match the docs where channel is cac = 3 
-//c ne kitne channels subscribed kre h? Ans. count docs where user is c = 3     
-
-//lets say chaiaurcode ke subscriber and subscribedto find krna hai
-     const channel = User.aggregate([
-          {
-               $match:{//username is cac
-                    userName:userName?.toLowerCase()//now direct ek document find krte hai match se
-               }
-          },
-          //to find subscriber of cac, goto subscription model kyuki wha to field hai subscriber aur channel
-          {
-               $lookup:{
-                    from:"subscriptions",//ye humesh db me lowercase and plural me store hota hai
-                    localField:"_id",
-                    foreignField:"channel",
-                    as:"subscribers"
-               }
-          },
-          //to find how many channels does cac subscribed
-          {
-               $lookup:{
-                    from:"subscriptions",//ye humesh db me lowercase and plural me store hota hai
-                    localField:"_id",//cac ki id
-                    foreignField:"subscriber",
-                    as:"subscribedTo"
-               }
-          },
-          //to add the fields give another pipeline
-          {
-               $addFields:{
-                    subscribersCount:{
-                         $size:"$subscribers"//to calculate no. of subscribers
-                    },
-                    channelsSubscribedTo:{
-                         $size:"$subscribedTo"//to calculate no. of subscribers
-                    },
-                    isSubscribed:{//to give true ya false if current user is subscribed to that channel(jiske subscribers hum dekh rhe h) or not
-                         $cond:{
-                              if:{$in:[req.user?._id,"$subscribers.subscriber"]},
-                              then:true,
-                              else:false
-                         }
-                    }
-               }
-          },
-          //now to project aur give only those field which is required by frontend, add another pipeline
-          {
-               $project:{
-                    fullName:1,
-                    userName:1,
-                    subscribersCount:1,
-                    channelsSubscribedTo:1,
-                    isSubscribed:1,
-                    avatar:1,
-                    coverImage:1,
-                    email:1,
-               }
-          }
+ 
+     if (!userName?.trim()) {
+         throw new ApiError(400, "username is missing")
+     }
+ 
+     const channel = await User.aggregate([
+         {
+             $match: {
+                 userName: userName?.toLowerCase()
+             }
+         },
+         {
+             $lookup: {
+                 from: "subscriptions",
+                 localField: "_id",
+                 foreignField: "channel",
+                 as: "subscribers"
+             }
+         },
+         {
+             $lookup: {
+                 from: "subscriptions",
+                 localField: "_id",
+                 foreignField: "subscriber",
+                 as: "subscribedTo"
+             }
+         },
+         {
+             $addFields: {
+                 subscribersCount: {
+                     $size: "$subscribers"
+                 },
+                 channelsSubscribedToCount: {
+                     $size: "$subscribedTo"
+                 },
+                 isSubscribed: {
+                     $cond: {
+                         if: {$in: [req.user?._id, "$subscribers.subscriber"]},
+                         then: true,
+                         else: false
+                     }
+                 }
+             }
+         },
+         {
+             $project: {
+                 fullName: 1,
+                 userName: 1,
+                 subscribersCount: 1,
+                 channelsSubscribedToCount: 1,
+                 isSubscribed: 1,
+                 avatar: 1,
+                 coverImage: 1,
+                 email: 1
+ 
+             }
+         }
      ])
-   //now we got the value of channel as aggregate function return array we return arr[0]
-   return res.status(400)
-             .json(new ApiResponse(400,channel[0],"User Channel fetched successfully!!"))
-})
+ 
+     if (!channel?.length) {
+         throw new ApiError(404, "channel does not exists")
+     }
+ 
+     return res
+     .status(200)
+     .json(
+         new ApiResponse(200, channel[0], "User channel fetched successfully")
+     )
+ })
 
 //now get watch history of current user
 const getWatchHistory = asyncHandler(async(req,res)=>{
@@ -463,7 +546,7 @@ const getWatchHistory = asyncHandler(async(req,res)=>{
      const user = await User.aggregate([
           {
                $match:{//ab mujhe string ko Object_id me convert krna pdega kyuki yha mongoose kaam nhi krta directly to mannually likhna pdega
-                    _id:new mongoose.Types.ObjectId(_id)
+                    _id:new mongoose.Types.ObjectId(req.user._id)
                }//now ab user mil gya hai
           },
           {//now find watch history of user, abhi me users ke andar hu, yha se videos ki field lunga

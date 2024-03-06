@@ -36,17 +36,17 @@ router.route("/change-password").post(verifyJWT, changeCurrentPassword)
 router.route("/current-user").get(verifyJWT, getCurrentUser)//get kyuki sirf info le rhe hai
 
 //update account details
-router.route("update-account").patch(verifyJWT, updateAccountDetails)//kyuki kuch details hi update krni hai
+router.route("/update-account").patch(verifyJWT, updateAccountDetails)//kyuki kuch details hi update krni hai
 
 //update avatar
 //now yha multer bhi lagega kyuki avatar ko upload krna h
 router.route("/update-avatar").patch(verifyJWT, upload.single("avatar"), updateUserAvatar);
 
 //update coverImage
-router.route("update-coverImage").patch(verifyJWT, upload.single("/coverImage"), updateUserCoverImage);
+router.route("/update-coverImage").patch(verifyJWT, upload.single("coverImage"), updateUserCoverImage);
 
 //get channel profile kyuki params se le rhe hai
-router.route("/c/:userName").get(verifyJWT, getUserChannelProfile)
+router.route("/c/:userName").get(verifyJWT, getUserChannelProfile)//isko postman me "{{server}}/c/one" likhna h, one is username
 
 //get user watchHistory
 router.route("/history").get(verifyJWT, getWatchHistory)
