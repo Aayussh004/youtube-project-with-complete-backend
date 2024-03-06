@@ -7,6 +7,7 @@ import { User } from "../models/user.models.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken"
+import mongoose from "mongoose";
 
 //for making refresh tokens for user
  //step 5: Generate refresh and access token (for Login)
@@ -358,23 +359,17 @@ const updateUserAvatar = asyncHandler(async(req,res)=>{
 
 const updateUserCoverImage = asyncHandler(async(req,res)=>{
      const {CoverLocalPath} = req.file?.path;//user se newavatar lelo jo update krwana hai
-     //ye multer se aaya hai kyuki ye file local me upload ho gyi h ab
-
-
-     //now if avatar ka localpath mil gya to multer ne local me upload krdi hogi
+    
      if(!CoverLocalPath){
           throw new ApiError(400,"Avatar file is required!:avatar not found")
      }
 
-     //now ab new avatar ko cloudinary me upload krna pdega yha mongoose kaam nhi aayega kyoki db to ab cloudinary hai na image files ke liye
     const CoverImage = await uploadOnCloudinary(avatarLocalPath)
 
     if(!CoverImage.url){
      throw new ApiError(400,"Error while uploading new avatar to cloudinary!!")
     }
 
-    //now ab mongodb me bhi avatar hai wha ka url change krna pdega na 
-    //get the user and update the url of cloudinary in db
     const user = await User.findByIdAndUpdate(req.user?._id,{
      $set:{coverimage:CoverImage.url}
     },{new:true}).select("-password")//password hta do
@@ -383,7 +378,137 @@ const updateUserCoverImage = asyncHandler(async(req,res)=>{
     .status(200)
     .ApiResponse(200,user,"CoverImage Changed successfully!!");
 })
-export {registerUser,loginUser,logoutUser,refreshAccessToken,changeCurrentPassword,updateAccountDetails,updateUserAvatar,updateUserCoverImage};
+
+
+//yha pe pipeline use krenge
+const getUserChannelProfile = asyncHandler(async (req,res)=>{
+
+     const {userName} = req.params
+
+     if(!userName){throw new ApiError(400,"UserName is missing: getUserChannelProfile controller")}
+
+//document - {subscriber,channel}//ye whi subscription.model.js ka docs hai
+//users: a,b,c,d  channel:cac,hcc,fcc
+//{a,cac} {b,cac} {c,cac} {c,hcc} {c,fcc} 
+//now cac ke kitne subscriber hai? Ans. count/match the docs where channel is cac = 3 
+//c ne kitne channels subscribed kre h? Ans. count docs where user is c = 3     
+
+//lets say chaiaurcode ke subscriber and subscribedto find krna hai
+     const channel = User.aggregate([
+          {
+               $match:{//username is cac
+                    userName:userName?.toLowerCase()//now direct ek document find krte hai match se
+               }
+          },
+          //to find subscriber of cac, goto subscription model kyuki wha to field hai subscriber aur channel
+          {
+               $lookup:{
+                    from:"subscriptions",//ye humesh db me lowercase and plural me store hota hai
+                    localField:"_id",
+                    foreignField:"channel",
+                    as:"subscribers"
+               }
+          },
+          //to find how many channels does cac subscribed
+          {
+               $lookup:{
+                    from:"subscriptions",//ye humesh db me lowercase and plural me store hota hai
+                    localField:"_id",//cac ki id
+                    foreignField:"subscriber",
+                    as:"subscribedTo"
+               }
+          },
+          //to add the fields give another pipeline
+          {
+               $addFields:{
+                    subscribersCount:{
+                         $size:"$subscribers"//to calculate no. of subscribers
+                    },
+                    channelsSubscribedTo:{
+                         $size:"$subscribedTo"//to calculate no. of subscribers
+                    },
+                    isSubscribed:{//to give true ya false if current user is subscribed to that channel(jiske subscribers hum dekh rhe h) or not
+                         $cond:{
+                              if:{$in:[req.user?._id,"$subscribers.subscriber"]},
+                              then:true,
+                              else:false
+                         }
+                    }
+               }
+          },
+          //now to project aur give only those field which is required by frontend, add another pipeline
+          {
+               $project:{
+                    fullName:1,
+                    userName:1,
+                    subscribersCount:1,
+                    channelsSubscribedTo:1,
+                    isSubscribed:1,
+                    avatar:1,
+                    coverImage:1,
+                    email:1,
+               }
+          }
+     ])
+   //now we got the value of channel as aggregate function return array we return arr[0]
+   return res.status(400)
+             .json(new ApiResponse(400,channel[0],"User Channel fetched successfully!!"))
+})
+
+//now get watch history of current user
+const getWatchHistory = asyncHandler(async(req,res)=>{
+//interview question - what is the type of _id? 
+//  _id aapko ek string deta hai jo ki mongoose behind the scene convert krdeta hai Objectid('_id') me
+
+     const user = await User.aggregate([
+          {
+               $match:{//ab mujhe string ko Object_id me convert krna pdega kyuki yha mongoose kaam nhi krta directly to mannually likhna pdega
+                    _id:new mongoose.Types.ObjectId(_id)
+               }//now ab user mil gya hai
+          },
+          {//now find watch history of user, abhi me users ke andar hu, yha se videos ki field lunga
+              $lookup:{
+
+               from:"videos",//Video.model wala Video hai
+               localField:"watchHistory",
+               foreignField:"_id",
+               as:"watchHistory",//now ab mujhe nested pipeline lgani pdegi kyuki mene current user ki watchhistory to nikal liya bt ab hr history me uss video ke views, duration, subscribers bhi to dikhana hai
+               pipeline:[
+
+                    {//abhi me videos ke andar se users ki fields lunga
+                         $lookup:{
+                              from:"users",
+                              localField:"owner",
+                              foreignField:"_id",
+                              as:"owner",//now ab mujhe history ke videos ki saari chiz nhi chahiye to add new pipeline
+                              pipeline:[{
+                                   $project:{
+                                        fullName:1,
+                                        userName:1,
+                                        avatar:1
+                                   }
+                              },
+                              {
+                                   $addFields:{
+                                        owner:{
+                                             $first:"$owner"
+                                        }
+                                   }
+                              }
+                         ]
+                         }
+                     }
+                 ]
+              }
+          }
+     ])
+
+     return res.status(400)
+               .json(new ApiResponse(400,user[0].watchHistory,"Watch history fetched successfully!!"))
+
+})
+
+export {registerUser,loginUser,logoutUser,refreshAccessToken,changeCurrentPassword,getCurrentUser,updateAccountDetails,updateUserAvatar,updateUserCoverImage,getUserChannelProfile,getWatchHistory};
 
 
 
